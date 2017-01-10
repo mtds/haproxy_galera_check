@@ -1,0 +1,10 @@
+[Unit]
+Description=Check the status of Galera/MySQL
+After=mysql.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/clusterchk.sh
+
+[Install]
+WantedBy=multi-user.target

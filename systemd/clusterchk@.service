@@ -1,0 +1,14 @@
+[Unit]
+Description=Check the status of Galera/MySQL
+After=mysql.service
+Requires=clusterchk.socket
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/clusterchk.sh
+TimeoutStopSec=5
+StandardInput=socket
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
