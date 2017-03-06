@@ -2,7 +2,7 @@
 Description=Clusterchk socket
 
 [Socket]
-ListenStream=10.10.24.164:9999
+ListenStream=9999
 Accept=true
 
 [Install]
