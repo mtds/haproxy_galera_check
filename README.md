@@ -6,7 +6,6 @@ an HTTP message to HAproxy if the node is in sync with the rest of the cluster o
 The script implements the following algorithm:
 
 ![Galera Health Flowchart](/reference/galera_multi_master_health_flowchart.png)
-Format: ![Alt Text](url)
 
 The main idea came from the following article: https://severalnines.com/resources/tutorials/mysql-load-balancing-haproxy-tutorial
 
