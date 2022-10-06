@@ -125,8 +125,8 @@ if [ "$GALERA_STATUS" == "Synced" ]; then
   else
      http_no_access "Galera status is $GALERA_STATUS but the local MySQL instance is reported to be read-only.\r\n"
   fi
-elif [ "$GALERA_STATUS" == "Donor" ]; then # node is acting as 'Donor' for another node
-  if [ "$SST_METHOD" == "xtrabackup" ] || [ "$SST_METHOD" == "xtrabackup-v2" ]; then
+elif [ "$GALERA_STATUS" == "Donor/Desynced" ]; then # node is acting as 'Donor' for another node
+  if [ "$SST_METHOD" == "mariabackup" ] || [ "$SST_METHOD" == "xtrabackup" ] || [ "$SST_METHOD" == "xtrabackup-v2" ]; then
      http_ok "Galera status is $GALERA_STATUS.\r\n" # xtrabackup is a non-blocking method
   else
      http_no_access "Galera status is $GALERA_STATUS.\r\n"
