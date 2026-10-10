@@ -5,7 +5,27 @@ to HAproxy if the node is in sync with the rest of the cluster or not.
 
 The script implements the following algorithm:
 
-![Galera Health Flowchart](/reference/galera_multi_master_health_flowchart.png)
+```mermaid
+flowchart TD
+    A["Health check request"] --> B{"systemctl available?"}
+    B -- yes --> C{"MySQL/MariaDB unit active?"}
+    B -- no --> D
+    C -- no --> R1["503: instance not active"]
+    C -- yes --> D["Resolve credentials: MYSQL_DEFAULTS_FILE, then /etc/mysql/debian.cnf, then root over unix socket"]
+    D --> E{"Connection probe succeeded?"}
+    E -- no --> R2["503: no usable credentials"]
+    E -- yes --> F["Query wsrep_local_state_comment, wsrep_sst_method, read_only"]
+    F --> G{"All queries succeeded?"}
+    G -- no --> R3["503: query failed"]
+    G -- yes --> H{"wsrep_local_state_comment"}
+    H -- Synced --> I{"read_only = 0?"}
+    I -- yes --> OK["200 OK"]
+    I -- no --> R4["503: read-only"]
+    H -- Donor/Desynced --> J{"Non-blocking SST?"}
+    J -- "mariabackup or xtrabackup" --> OK
+    J -- other --> R5["503: blocking SST donor"]
+    H -- "any other state" --> R6["503: node not Synced"]
+```
 
 The main idea came from the following article: https://severalnines.com/resources/tutorials/mysql-load-balancing-haproxy-tutorial
 
