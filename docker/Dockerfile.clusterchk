@@ -1,0 +1,16 @@
+#
+# clusterchk sidecar: reproduces the systemd socket-activation model with
+# socat (one clusterchk.sh invocation per incoming connection on 9999),
+# exactly like clusterchk.socket + clusterchk@.service do on a real node.
+#
+FROM debian:12-slim
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends mariadb-client socat ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/clusterchk.sh /usr/local/bin/clusterchk.sh
+
+EXPOSE 9999
+
+CMD ["socat", "TCP-LISTEN:9999,reuseaddr,fork", "EXEC:/usr/local/bin/clusterchk.sh"]

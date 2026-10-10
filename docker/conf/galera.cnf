@@ -1,0 +1,18 @@
+#
+# Minimal wsrep/Galera configuration baked into the demo node image.
+# The first node is bootstrapped via its command line
+# (see the pc.bootstrap=true argument in docker-compose.yml).
+#
+[mysqld]
+binlog_format           = ROW
+default_storage_engine  = InnoDB
+innodb_autoinc_lock_mode = 2
+bind-address            = 0.0.0.0
+
+wsrep_on                = ON
+wsrep_provider          = /usr/lib/galera/libgalera_smm.so
+wsrep_cluster_name      = clusterchk-demo
+wsrep_cluster_address   = gcomm://galera1,galera2,galera3
+
+wsrep_sst_method        = mariabackup
+wsrep_sst_auth          = sst:sstpass

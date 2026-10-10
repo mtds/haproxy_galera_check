@@ -1,0 +1,96 @@
+name: clusterchk-demo
+
+x-galera: &galera
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.galera
+  environment:
+    MARIADB_ROOT_PASSWORD: rootpw
+  volumes:
+    - ./init:/docker-entrypoint-initdb.d:ro
+  # The stock healthcheck.sh relies on a credentials file inside the
+  # datadir, which a full SST wipes on joining nodes; use root/TCP instead.
+  healthcheck:
+    test: ["CMD-SHELL", "mariadb -h127.0.0.1 -uroot -p\"$$MARIADB_ROOT_PASSWORD\" -N -e \"SHOW STATUS LIKE 'wsrep_local_state_comment'\" | grep -q Synced"]
+    interval: 5s
+    timeout: 5s
+    retries: 60
+
+x-clusterchk: &clusterchk
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.clusterchk
+  volumes:
+    - ./conf/clusterchk.cnf:/etc/clusterchk.cnf:ro
+
+services:
+  # Bootstrapper node: an empty gcomm address makes a fresh/safe node
+  # form the initial Prim component (MariaDB derives bootstrap from the
+  # empty address; the pc.bootstrap provider option is ignored here).
+  # Restarting the whole cluster requires starting this node first
+  # (see README.md).
+  galera1:
+    <<: *galera
+    hostname: galera1
+    command: ["mariadbd", "--wsrep-cluster-address=gcomm://"]
+
+  galera2:
+    <<: *galera
+    hostname: galera2
+    depends_on:
+      galera1:
+        condition: service_healthy
+
+  galera3:
+    <<: *galera
+    hostname: galera3
+    depends_on:
+      galera1:
+        condition: service_healthy
+
+  # Each sidecar shares the network namespace of its galera node
+  # (network_mode), faithfully reproducing the production layout where
+  # clusterchk answers HAProxy's check on port 9999 of the node itself.
+  clusterchk1:
+    <<: *clusterchk
+    network_mode: service:galera1
+    environment:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_DEFAULTS_FILE: /etc/clusterchk.cnf
+    depends_on:
+      galera1:
+        condition: service_healthy
+
+  clusterchk2:
+    <<: *clusterchk
+    network_mode: service:galera2
+    environment:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_DEFAULTS_FILE: /etc/clusterchk.cnf
+    depends_on:
+      galera2:
+        condition: service_healthy
+
+  clusterchk3:
+    <<: *clusterchk
+    network_mode: service:galera3
+    environment:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_DEFAULTS_FILE: /etc/clusterchk.cnf
+    depends_on:
+      galera3:
+        condition: service_healthy
+
+  haproxy:
+    image: haproxy:2.9
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - ./conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      clusterchk1:
+        condition: service_started
+      clusterchk2:
+        condition: service_started
+      clusterchk3:
+        condition: service_started

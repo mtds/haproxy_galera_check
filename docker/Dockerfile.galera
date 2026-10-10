@@ -1,0 +1,13 @@
+FROM mariadb:11.4
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends galera-4 mariadb-backup \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY docker/conf/galera.cnf /etc/mysql/conf.d/galera.cnf
+COPY docker/entrypoint-node.sh /usr/local/bin/entrypoint-node.sh
+RUN chmod +x /usr/local/bin/entrypoint-node.sh
+
+ENTRYPOINT ["entrypoint-node.sh"]
+# Declaring ENTRYPOINT resets the inherited CMD, so set it back explicitly.
+CMD ["mariadbd"]
