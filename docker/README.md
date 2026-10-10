@@ -65,6 +65,9 @@ per node answering on port 9999, exactly like the SystemD socket-activated units
 * **Healthcheck credentials**: the image-provided `healthcheck.sh` stores its
   option file inside the datadir, which a full SST wipes, so the compose file uses
   a root/TCP probe on `127.0.0.1` instead.
+* **Check semantics**: `check port 9999` alone only tests that the port accepts
+  connections, which the socket activation always grants; `option httpchk` is what
+  makes HAProxy parse the 200/503 status line produced by clusterchk.
 * **HAProxy and DNS**: HAProxy resolves server names at load time; after recreating
   node containers, `docker compose restart haproxy` to refresh the addresses.
 * **Donor behaviour**: after a *short* outage a node rejoins through IST and the

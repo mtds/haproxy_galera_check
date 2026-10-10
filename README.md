@@ -59,7 +59,10 @@ policies ( *Round Robin*, *Least Connected*, *Source Tracking*, etc.).
 The problem with Galera is that the MySQL server which HAproxy has selected can be up&running but it could be that the internal status
 is not *Synced* with the rest of the cluster.
 
-An example on how to configure HAproxy to run the shell script is available under the *haproxy* subdirectory.
+An example on how to configure HAproxy to exploit the HTTP response of the script (`option httpchk` on the check port)
+is available under the *docker* subdirectory (`conf/haproxy.cfg`), verified end-to-end by the compose demo; its check
+timings are tuned for a quick demonstration, while a production deployment would prefer wider values such as
+`inter 12000 rise 3 fall 3`.
 
 ## Running clusterchk using SystemD
 
