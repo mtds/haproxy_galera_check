@@ -141,8 +141,9 @@ status_query () {
   local result
   result=$(mysql "${MYSQL_ARGS[@]}" --silent --raw -N -e "$1" 2>/dev/null) || return 1
   [ -n "$result" ] || return 1
-  # just remove the value label
-  awk '{print $2}' <<< "$result"
+  # 'SHOW ... LIKE' returns a label and a value, while scalar SELECTs
+  # return only the value: take the second field when present.
+  awk '{ if (NF > 1) print $2; else print $1 }' <<< "$result"
 }
 
 #
