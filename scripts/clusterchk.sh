@@ -147,12 +147,14 @@ status_query () {
 }
 
 #
-# Safety check: verify if MySQL is up and running.
+# Safety check: verify if MySQL is up and running (when systemd is present).
 #
-MYSQL_INSTANCE=$(detect_mysql_unit) || MYSQL_INSTANCE="inactive"
-if [ "$MYSQL_INSTANCE" = 'inactive' ]; then
-    http_no_access "MySQL instance is not active.\r\n"
-    exit 1
+if command -v systemctl >/dev/null 2>&1; then
+  MYSQL_INSTANCE=$(detect_mysql_unit) || MYSQL_INSTANCE="inactive"
+  if [ "$MYSQL_INSTANCE" = 'inactive' ]; then
+      http_no_access "MySQL instance is not active.\r\n"
+      exit 1
+  fi
 fi
 
 if ! setup_mysql_connection; then
