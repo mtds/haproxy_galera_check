@@ -49,7 +49,8 @@ dedicated monitoring user and drop an option file like *clusterchk.cnf.example* 
 The main point of using HAproxy is to balance TCP connections between application servers and the Galera cluster, not to mention
 the possibility of logically separate the database servers from the DMZ network.
 
-(Reference: http://galeracluster.com/documentation-webpages/haproxy.html)
+(Reference: the MariaDB Galera Cluster load-balancing documentation[^k7p2m], and the original
+Codership page describing this HAProxy check-script setup, preserved by the Internet Archive[^z4q8w].)
 
 *HAproxy* is a generic load balancer and proxy server for TCP and HTTP based applications, so it does not concern itself with the
 status of the servers on the other side: either they are available or it will select other destinations, based on different routing
@@ -64,3 +65,9 @@ An example on how to configure HAproxy to run the shell script is available unde
 
 As a quick test, the script can be executed also directly on the command line but in production the main idea is to use
 the *SystemD* units available under the *systemd* subdirectory.
+
+[^k7p2m]: Load Balancing in MariaDB Galera Cluster
+<https://mariadb.com/docs/galera-cluster/high-availability/load-balancing/load-balancing-in-mariadb-galera-cluster>
+
+[^z4q8w]: HAProxy, original Galera Cluster documentation (archived)
+<https://web.archive.org/web/20190620230223/http://galeracluster.com/documentation-webpages/haproxy.html>
