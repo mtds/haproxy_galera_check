@@ -1,6 +1,7 @@
 [Unit]
 Description=Check the status of Galera/MySQL
-After=mysql.service
+After=mysql.service clusterchk.socket
+Requires=clusterchk.socket
 
 [Service]
 Type=simple
