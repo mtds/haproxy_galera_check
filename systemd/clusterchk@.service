@@ -5,6 +5,7 @@ Requires=clusterchk.socket
 
 [Service]
 Type=simple
+EnvironmentFile=-/etc/clusterchk.conf
 ExecStart=/usr/local/bin/clusterchk.sh
 TimeoutStopSec=5
 StandardInput=socket

@@ -35,10 +35,17 @@
 
 set -u
 
-# Variables:
-MYSQL_HOST="localhost"
-MYSQL_PORT="3306"
-MYSQL_DEFAULTS_FILE="/etc/mysql/debian.cnf"
+#
+# Overridable via environment (e.g. EnvironmentFile=/etc/clusterchk.conf):
+#   MYSQL_DEFAULTS_FILE  option file with a [client] section (user/password/socket)
+#   MYSQL_HOST           empty string means: connect through the unix socket
+#   MYSQL_PORT           only used when MYSQL_HOST is set
+#
+MYSQL_HOST="${MYSQL_HOST-localhost}"
+MYSQL_PORT="${MYSQL_PORT-3306}"
+MYSQL_DEFAULTS_FILE="${MYSQL_DEFAULTS_FILE-}"
+
+MYSQL_ARGS=()
 
 #
 # Detect the systemd unit name of the local database instance.
@@ -46,7 +53,7 @@ MYSQL_DEFAULTS_FILE="/etc/mysql/debian.cnf"
 detect_mysql_unit () {
   local unit
   for unit in mysql.service mariadb.service mysqld.service; do
-    if [ "$(/bin/systemctl is-active "$unit" 2>/dev/null)" = 'active' ]; then
+    if [ "$(systemctl is-active "$unit" 2>/dev/null)" = 'active' ]; then
       echo "$unit"
       return 0
     fi
@@ -55,25 +62,75 @@ detect_mysql_unit () {
 }
 
 #
+# Resolve which option file to use: explicit one first, then the
+# Debian/Ubuntu maintenance file as a backward-compatible fallback.
+#
+resolve_defaults_file () {
+  if [ -n "$MYSQL_DEFAULTS_FILE" ] && [ -r "$MYSQL_DEFAULTS_FILE" ]; then
+    return 0
+  fi
+  MYSQL_DEFAULTS_FILE=""
+  if [ -r /etc/mysql/debian.cnf ]; then
+    MYSQL_DEFAULTS_FILE="/etc/mysql/debian.cnf"
+  fi
+}
+
+#
+# Assemble the mysql client connection arguments.
+#
+build_mysql_args () {
+  MYSQL_ARGS=()
+  if [ -n "$MYSQL_DEFAULTS_FILE" ]; then
+    MYSQL_ARGS+=(--defaults-extra-file="$MYSQL_DEFAULTS_FILE")
+  fi
+  if [ -n "$MYSQL_HOST" ]; then
+    MYSQL_ARGS+=(--host="$MYSQL_HOST" --port="$MYSQL_PORT")
+  fi
+}
+
+mysql_probe () {
+  mysql "${MYSQL_ARGS[@]}" --silent --raw -N -e 'SELECT 1;' >/dev/null 2>&1
+}
+
+#
+# Establish the connection strategy (fail-soft):
+#   1) option file (+ TCP or socket, per MYSQL_HOST)
+#   2) root over the unix socket: works passwordless with the
+#      unix_socket authentication plugin (Fedora/RHEL, MariaDB)
+#
+setup_mysql_connection () {
+  resolve_defaults_file
+  build_mysql_args
+  if [ ${#MYSQL_ARGS[@]} -gt 0 ] && mysql_probe; then
+    return 0
+  fi
+  MYSQL_DEFAULTS_FILE=""
+  MYSQL_HOST=""
+  build_mysql_args
+  MYSQL_ARGS+=(--user=root)
+  mysql_probe
+}
+
+#
 # Node status looks fine, so return an 'HTTP 200' status code.
 #
 http_ok () {
-  /bin/echo -e "HTTP/1.1 200 OK\r\n"
-  /bin/echo -e "Content-Type: text/plain\r\n"
-  /bin/echo -e "\r\n"
-  /bin/echo -e "$1"
-  /bin/echo -e "\r\n"
+  echo -e "HTTP/1.1 200 OK\r\n"
+  echo -e "Content-Type: text/plain\r\n"
+  echo -e "\r\n"
+  echo -e "$1"
+  echo -e "\r\n"
 }
 
 #
 # Node status reports problems, so return an 'HTTP 503' status code.
 #
 http_no_access () {
-  /bin/echo -e "HTTP/1.1 503 Service Unavailable\r\n"
-  /bin/echo -e "Content-Type: text/plain\r\n"
-  /bin/echo -e "\r\n"
-  /bin/echo -e "$1"
-  /bin/echo -e "\r\n"
+  echo -e "HTTP/1.1 503 Service Unavailable\r\n"
+  echo -e "Content-Type: text/plain\r\n"
+  echo -e "\r\n"
+  echo -e "$1"
+  echo -e "\r\n"
 }
 
 #
@@ -82,9 +139,7 @@ http_no_access () {
 #
 status_query () {
   local result
-  result=$(/usr/bin/mysql --defaults-extra-file="$MYSQL_DEFAULTS_FILE" \
-             --host="$MYSQL_HOST" --port="$MYSQL_PORT" \
-             --silent --raw -N -e "$1" 2>/dev/null) || return 1
+  result=$(mysql "${MYSQL_ARGS[@]}" --silent --raw -N -e "$1" 2>/dev/null) || return 1
   [ -n "$result" ] || return 1
   # just remove the value label
   awk '{print $2}' <<< "$result"
@@ -99,8 +154,8 @@ if [ "$MYSQL_INSTANCE" = 'inactive' ]; then
     exit 1
 fi
 
-if [ ! -r "$MYSQL_DEFAULTS_FILE" ]; then
-    http_no_access "Cannot read the defaults file $MYSQL_DEFAULTS_FILE.\r\n"
+if ! setup_mysql_connection; then
+    http_no_access "Unable to connect to the local MySQL instance: no usable credentials found.\r\n"
     exit 1
 fi
 

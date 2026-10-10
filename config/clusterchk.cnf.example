@@ -1,0 +1,9 @@
+#
+# MySQL client option file for clusterchk (copy to /etc/clusterchk.cnf,
+# owner root, permissions 0600).
+#
+[client]
+user=clustercheck
+password=CHANGE_ME
+# Fedora/RHEL default socket path, if connecting without TCP:
+#socket=/var/lib/mysql/mysql.sock

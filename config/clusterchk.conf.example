@@ -1,0 +1,13 @@
+#
+# Environment overrides for clusterchk.sh, read by the systemd units
+# via EnvironmentFile (copy to /etc/clusterchk.conf).
+#
+
+# Option file with a [client] section (see clusterchk.cnf.example).
+# If unset/unreadable, clusterchk falls back to /etc/mysql/debian.cnf
+# (Debian/Ubuntu) and finally to root over the unix socket.
+MYSQL_DEFAULTS_FILE=/etc/clusterchk.cnf
+
+# Set MYSQL_HOST to an empty value to connect through the unix socket:
+#MYSQL_HOST=
+#MYSQL_PORT=3306

@@ -9,10 +9,20 @@ The script implements the following algorithm:
 
 The main idea came from the following article: https://severalnines.com/resources/tutorials/mysql-load-balancing-haproxy-tutorial
 
-## Limitations
+## Distributions
 
-At the moment the script is designed to be executed only on Debian/Ubuntu Linux distributions, since it is relying on the *sys-maint*
-user defined under */etc/mysql/debian.cnf* in order to connect to the MySQL instance.
+The script is distribution agnostic and resolves the credentials to connect to the local
+MySQL/MariaDB instance with the following fallback chain:
+
+1. The option file pointed by `MYSQL_DEFAULTS_FILE` (set it in `/etc/clusterchk.conf`, loaded by the SystemD units)
+2. `/etc/mysql/debian.cnf`, the Debian/Ubuntu maintenance credentials (*sys-maint* user)
+3. *root* over the unix socket, which works passwordless wherever the *unix_socket*
+   authentication plugin is in place (Fedora/RHEL MariaDB and recent Debian MariaDB)
+
+Example configuration files are available under the *config* subdirectory. On Fedora-like
+distributions no configuration is usually needed thanks to step 3; otherwise create a
+dedicated monitoring user and drop an option file like *clusterchk.cnf.example* into
+*/etc/clusterchk.cnf*.
 
 ## HAproxy
 
